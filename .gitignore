@@ -12,3 +12,7 @@ frontend/node_modules/
 # Environment variables
 backend/.env
 .env
+
+# ML models
+ml_model/models/*.pkl
+ml_model/models/*.joblib
