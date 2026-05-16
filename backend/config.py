@@ -13,7 +13,7 @@ ENCODER_PATH       = ML_MODELS_DIR / "label_encoder_xgboost.pkl"
 FEATURE_NAMES_PATH = ML_MODELS_DIR / "feature_names_xgboost.txt"
 
 # ─── OpenWeatherMap ───────────────────────────────────────────────────────────
-OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
+OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY",)
 OPENWEATHER_BASE_URL = "https://api.openweathermap.org/data/2.5"
 
 # ─── Safi city coordinates ────────────────────────────────────────────────────

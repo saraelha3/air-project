@@ -1,6 +1,14 @@
-frontend/node_modules/
-frontend/dist/
-backend/__pycache__/
+# Python virtual environment
 backend/venv/
+
+# Python cache
+backend/__pycache__/
+__pycache__/
 *.pyc
+
+# Frontend dependencies
+frontend/node_modules/
+
+# Environment variables
+backend/.env
 .env
