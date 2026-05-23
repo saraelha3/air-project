@@ -1,0 +1,22 @@
+:root {
+  --bg-primary: #0F2A1D;
+  --bg-surface: #375534;
+  --accent: #6B9071;
+  --text-secondary: #AEC3B0;
+  --text-primary: #E3EED4;
+  --risk-none: #4ade80;
+  --risk-low: #fbbf24;
+  --risk-medium: #fb923c;
+  --risk-high: #f87171;
+  --font-body: 'DM Sans', sans-serif;
+  --font-display: 'Syne', sans-serif;
+  --glass-bg: rgba(55,85,52,0.18);
+  --glass-border: rgba(174,195,176,0.13);
+  --glass-blur: 16px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --sidebar-w: 224px;
+  --topbar-h: 58px;
+  --footer-h: 42px;
+}
