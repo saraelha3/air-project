@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import useWeather from "../hooks/useWeather";
 import useRiskPrediction from "../hooks/useRiskPrediction";
+import { useToast } from "../contexts/ToastContext";
 import RiskBadge from "../components/RiskBadge";
 import RiskAlert from "../components/RiskAlert";
 import GasFlowGauge from "../components/GasFlowGauge";
@@ -9,9 +10,21 @@ import ProbabilityChart from "../components/ProbabilityChart";
 import HourlyChart from "../components/HourlyChart";
 import RadarMap from "../components/RadarMap";
 import ForecastPanel from "../components/ForecastPanel";
-import { Wind, RotateCcw, Zap, Thermometer, Droplets, CheckCircle, AlertTriangle, TrendingUp } from "lucide-react";
+import Tooltip from "../components/Tooltip";
+import { SkeletonCard, SkeletonKPI } from "../components/SkeletonLoader";
+import { Wind, RotateCcw, Zap, Thermometer, Droplets, CheckCircle, AlertTriangle, TrendingUp, Info } from "lucide-react";
 
 const DIRECTIONS = ["N","NE","E","SE","S","SO","O","NO"];
+const DIR_TIPS = {
+  N:"Vent du Nord — polluants dirigés vers le Sud (ville)",
+  NE:"Vent du Nord-Est — risque modéré pour Safi",
+  E:"Vent d'Est — polluants dirigés vers l'Atlantique",
+  SE:"Vent du Sud-Est — risque faible",
+  S:"Vent du Sud — polluants dirigés vers le Nord",
+  SO:"Vent du Sud-Ouest — dispersion en mer, risque faible",
+  O:"Vent d'Ouest (mer) — dilution des polluants",
+  NO:"Vent du Nord-Ouest — risque modéré",
+};
 const RISK_META = [
   { key:"Pas de risque", color:"#4ade80", bg:"rgba(74,222,128,0.1)",   border:"rgba(74,222,128,0.3)",   icon:<CheckCircle size={13}/> },
   { key:"Risque faible", color:"#fbbf24", bg:"rgba(251,191,36,0.1)",   border:"rgba(251,191,36,0.3)",   icon:<AlertTriangle size={13}/> },
@@ -22,11 +35,34 @@ const RISK_META = [
 export default function Dashboard() {
   const { weather, forecast, loading: wLoading, error: wError } = useWeather();
   const { prediction, predictCustom, loading: predicting, error: predError } = useRiskPrediction();
-  const [gasFlow, setGasFlow] = useState(1500);
+  const toast = useToast();
+  const [gasFlow, setGasFlow]     = useState(1500);
   const [selectedDir, setSelectedDir] = useState("S");
 
-  if (wLoading) return <div className="loading-screen"><div className="loading-spinner"/><span className="loading-text">Chargement…</span></div>;
+  useEffect(() => {
+    if (predError) toast.error("Erreur de prédiction", predError, 5000);
+  }, [predError]);
+
+  useEffect(() => {
+    if (prediction && !predicting) {
+      const msg = ["Aucun risque détecté 🎉","Risque faible détecté","Risque moyen — Vigilance requise","⚠️ Risque élevé — Alerte!"][prediction.scenario];
+      const type = prediction.scenario >= 2 ? "warning" : "success";
+      toast[type](msg, `Confiance: ${prediction.confidence}%`, 5000);
+    }
+  }, [prediction]);
+
+  if (wLoading) return (
+    <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
+      <SkeletonCard height={360} />
+      <SkeletonKPI count={4} />
+    </div>
+  );
   if (wError) return <div className="error-box"><p>❌ {wError}</p></div>;
+
+  const handlePredict = async () => {
+    toast.info("Prédiction en cours…", `Débit: ${gasFlow} m³/h · Vent: ${selectedDir}`, 2000);
+    await predictCustom({ gas_flow: gasFlow, direction_vent: selectedDir });
+  };
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
@@ -36,6 +72,9 @@ export default function Dashboard() {
       <div className="glass animate-in" style={{ padding:"1.5rem" }}>
         <h2 style={{ fontFamily:"var(--font-display)", fontSize:"1rem", fontWeight:700, marginBottom:"1.4rem", display:"flex", alignItems:"center", gap:".5rem", color:"var(--text-primary)" }}>
           <Zap size={16} style={{ color:"#a78bfa" }}/> Simulation personnalisée IA
+          <Tooltip content="Simulez différents scénarios de débit de gaz OCP et de direction du vent pour prédire le risque de pollution à Safi." position="right">
+            <Info size={14} style={{ color:"var(--text-muted)", cursor:"help", marginLeft:4 }}/>
+          </Tooltip>
         </h2>
 
         <div className="grid-2" style={{ marginBottom:"1.2rem" }}>
@@ -43,20 +82,25 @@ export default function Dashboard() {
           <div style={{ background:"rgba(15,35,20,.6)", border:"1px solid var(--glass-border)", borderRadius:"var(--radius-sm)", padding:"1.3rem" }}>
             <div className="detail-label" style={{ marginBottom:".9rem", display:"flex", alignItems:"center", gap:".4rem" }}>
               <Wind size={13}/> Direction du vent simulée
+              <Tooltip content="La direction du vent détermine vers où se dispersent les polluants depuis l'usine OCP." position="top">
+                <Info size={11} style={{ color:"var(--text-muted)", cursor:"help", marginLeft:4 }}/>
+              </Tooltip>
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:".4rem" }}>
               {DIRECTIONS.map(d => (
-                <button key={d} onClick={()=>setSelectedDir(d)} style={{
-                  padding:".4rem .5rem", borderRadius:"var(--radius-xs)",
-                  border:`1px solid ${d===selectedDir?"#a78bfa":"var(--glass-border)"}`,
-                  background:d===selectedDir?"rgba(167,139,250,0.15)":"transparent",
-                  color:d===selectedDir?"#a78bfa":"var(--text-secondary)",
-                  cursor:"pointer", fontSize:".8rem", fontWeight:700,
-                  transition:"all .15s", fontFamily:"var(--font)",
-                  boxShadow:d===selectedDir?"0 0 10px rgba(167,139,250,.2)":"none",
-                }}>
-                  {d}
-                </button>
+                <Tooltip key={d} content={DIR_TIPS[d]} position="top">
+                  <button onClick={()=>setSelectedDir(d)} style={{
+                    width:"100%", padding:".4rem .3rem", borderRadius:"var(--radius-xs)",
+                    border:`1px solid ${d===selectedDir?"#a78bfa":"var(--glass-border)"}`,
+                    background:d===selectedDir?"rgba(167,139,250,0.15)":"transparent",
+                    color:d===selectedDir?"#a78bfa":"var(--text-secondary)",
+                    cursor:"pointer", fontSize:".8rem", fontWeight:700,
+                    transition:"all .15s", fontFamily:"var(--font)",
+                    boxShadow:d===selectedDir?"0 0 10px rgba(167,139,250,.2)":"none",
+                  }}>
+                    {d}
+                  </button>
+                </Tooltip>
               ))}
             </div>
           </div>
@@ -64,48 +108,43 @@ export default function Dashboard() {
 
         <div style={{ display:"flex", gap:".65rem", marginBottom:"1.2rem", flexWrap:"wrap" }}>
           {[
-            { icon:<Thermometer size={12}/>, label:"Temp.", value:`${weather?.temperature?.toFixed(1)??"--"}°C` },
-            { icon:<Droplets size={12}/>, label:"Humidité", value:`${weather?.humidity??"--"}%` },
-            { icon:<Wind size={12}/>, label:"Vent réel", value:`${weather?.wind_speed?.toFixed(1)??"--"} m/s` },
+            { icon:<Thermometer size={12}/>, label:"Temp.", value:`${weather?.temperature?.toFixed(1)??"--"}°C`, tip:"Température actuelle à Safi utilisée dans la simulation" },
+            { icon:<Droplets size={12}/>, label:"Humidité", value:`${weather?.humidity??"--"}%`, tip:"Humidité relative actuelle" },
+            { icon:<Wind size={12}/>, label:"Vent réel", value:`${weather?.wind_speed?.toFixed(1)??"--"} m/s`, tip:"Vitesse du vent mesurée en temps réel" },
           ].map(item => (
-            <div key={item.label} style={{ display:"flex", alignItems:"center", gap:".4rem", background:"rgba(255,255,255,.04)", border:"1px solid var(--glass-border)", borderRadius:"var(--radius-xs)", padding:".32rem .75rem", fontSize:".75rem", color:"var(--text-secondary)" }}>
-              <span style={{ color:"var(--accent)" }}>{item.icon}</span>
-              <span style={{ color:"var(--text-muted)" }}>{item.label}</span>
-              <strong style={{ color:"var(--text-primary)", marginLeft:2 }}>{item.value}</strong>
-            </div>
+            <Tooltip key={item.label} content={item.tip} position="top">
+              <div style={{ display:"flex", alignItems:"center", gap:".4rem", background:"rgba(255,255,255,.04)", border:"1px solid var(--glass-border)", borderRadius:"var(--radius-xs)", padding:".32rem .75rem", fontSize:".75rem", color:"var(--text-secondary)", cursor:"help" }}>
+                <span style={{ color:"var(--accent)" }}>{item.icon}</span>
+                <span style={{ color:"var(--text-muted)" }}>{item.label}</span>
+                <strong style={{ color:"var(--text-primary)", marginLeft:2 }}>{item.value}</strong>
+              </div>
+            </Tooltip>
           ))}
         </div>
 
-        {predError && <div style={{ color:"#f87171", fontSize:".8rem", marginBottom:"1rem", textAlign:"center" }}>⚠️ {predError}</div>}
-
-        <button
-          onClick={()=>predictCustom({ gas_flow:gasFlow, direction_vent:selectedDir })}
-          disabled={predicting}
-          style={{
-            width:"100%", padding:".8rem", borderRadius:"var(--radius-sm)",
-            border:"1px solid rgba(107,144,113,.4)",
-            background:predicting?"rgba(107,144,113,.1)":"linear-gradient(135deg,#375534,#6B9071)",
-            color:"var(--text-primary)", fontWeight:700, fontSize:".9rem",
-            cursor:predicting?"not-allowed":"pointer",
-            display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-            transition:"all .2s", opacity:predicting?.7:1,
-            boxShadow:predicting?"none":"0 4px 20px rgba(107,144,113,.25)",
-            letterSpacing:".02em", fontFamily:"var(--font)",
-          }}>
+        <button onClick={handlePredict} disabled={predicting} style={{
+          width:"100%", padding:".8rem", borderRadius:"var(--radius-sm)",
+          border:"1px solid rgba(107,144,113,.4)",
+          background:predicting?"rgba(107,144,113,.1)":"linear-gradient(135deg,#375534,#6B9071)",
+          color:"var(--text-primary)", fontWeight:700, fontSize:".9rem",
+          cursor:predicting?"not-allowed":"pointer",
+          display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+          transition:"all .2s", opacity:predicting?.7:1,
+          boxShadow:predicting?"none":"0 4px 20px rgba(107,144,113,.25)",
+          letterSpacing:".02em", fontFamily:"var(--font)",
+        }}>
           {predicting
             ? <><div className="loading-spinner" style={{ width:16, height:16, borderWidth:2 }}/> Calcul en cours…</>
             : <><RotateCcw size={15}/> Lancer la prédiction IA</>}
         </button>
       </div>
 
-      {/* ── Résultats ── */}
       {prediction && (
         <>
           <div style={{ textAlign:"center" }} className="animate-in">
             <RiskBadge scenario={prediction.scenario} confidence={prediction.confidence} />
           </div>
 
-          {/* 4 cartes probabilité */}
           <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:".75rem" }} className="animate-in">
             {RISK_META.map(({ key, color, bg, border, icon }) => {
               const pct = prediction.probabilities?.[key] ?? 0;
@@ -126,15 +165,9 @@ export default function Dashboard() {
 
           <div className="grid-2 animate-in">
             <ProbabilityChart probabilities={prediction.probabilities} />
-            <WindCompass
-              direction={prediction.weather?.wind_direction||weather?.wind_direction}
-              degrees={prediction.weather?.wind_deg||weather?.wind_deg}
-              speed={prediction.weather?.wind_speed||weather?.wind_speed}
-            />
+            <WindCompass direction={prediction.weather?.wind_direction||weather?.wind_direction} degrees={prediction.weather?.wind_deg||weather?.wind_deg} speed={prediction.weather?.wind_speed||weather?.wind_speed} />
           </div>
-          <div className="glass animate-in">
-            <HourlyChart forecast={forecast} />
-          </div>
+          <div className="glass animate-in"><HourlyChart forecast={forecast} /></div>
           <div className="grid-2 animate-in">
             <RadarMap weather={weather} />
             <ForecastPanel forecast={forecast} />

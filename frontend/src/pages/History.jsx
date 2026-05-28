@@ -1,5 +1,8 @@
-import React, { useState, useMemo } from "react";
-import { Clock, Download, TrendingUp, AlertTriangle, CheckCircle } from "lucide-react";
+import React, { useState, useMemo, useEffect } from "react";
+import { Clock, Download, TrendingUp, AlertTriangle, CheckCircle, Info } from "lucide-react";
+import { useToast } from "../contexts/ToastContext";
+import Tooltip from "../components/Tooltip";
+import { SkeletonTable } from "../components/SkeletonLoader";
 
 const RISK_META = [
   { label:"Pas de risque", color:"#4ade80", bg:"rgba(74,222,128,0.12)",   border:"rgba(74,222,128,0.35)"  },
@@ -35,12 +38,23 @@ function genHistory() {
 const ALL = genHistory();
 
 export default function History() {
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter]   = useState("all");
   const [expanded, setExpanded] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
+
+  // Simulate loading
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setLoading(false);
+      toast.success("Historique chargé", `${ALL.length} sessions récupérées`, 3000);
+    }, 800);
+    return () => clearTimeout(t);
+  }, []);
 
   const filtered = useMemo(()=>filter==="all"?ALL:ALL.filter(r=>r.scenario===parseInt(filter)),[filter]);
-  const counts = useMemo(()=>{ const c=[0,0,0,0]; ALL.forEach(r=>c[r.scenario]++); return c; },[]);
-  const avgConf = (ALL.reduce((s,r)=>s+parseFloat(r.confidence),0)/ALL.length).toFixed(1);
+  const counts   = useMemo(()=>{ const c=[0,0,0,0]; ALL.forEach(r=>c[r.scenario]++); return c; },[]);
+  const avgConf  = (ALL.reduce((s,r)=>s+parseFloat(r.confidence),0)/ALL.length).toFixed(1);
 
   const handleExport = () => {
     const header="Date,Heure,Scénario,Confiance,Débit gaz,Direction vent,Vitesse vent,Température,Humidité,Pas de risque %,Risque faible %,Risque moyen %,Risque élevé %\n";
@@ -49,21 +63,41 @@ export default function History() {
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a"); a.href=url; a.download="historique_ocp_atmosafe.csv"; a.click();
     URL.revokeObjectURL(url);
+    toast.success("Export CSV réussi", `${ALL.length} lignes exportées`, 3000);
   };
+
+  if (loading) return (
+    <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
+      <div className="kpi-strip" style={{ gridTemplateColumns:"repeat(5,1fr)" }}>
+        {Array.from({length:5}).map((_,i)=>(
+          <div key={i} style={{ background:"rgba(15,35,20,.7)", border:"1px solid rgba(174,195,176,0.1)", borderRadius:11, padding:"1rem 1.1rem", display:"flex", flexDirection:"column", gap:".55rem" }}>
+            <div className="skeleton" style={{ height:10, width:70, borderRadius:6 }}/>
+            <div className="skeleton" style={{ height:30, width:80, borderRadius:6 }}/>
+          </div>
+        ))}
+      </div>
+      <SkeletonTable />
+    </div>
+  );
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
       {/* KPI */}
       <div className="kpi-strip animate-in" style={{ gridTemplateColumns:"repeat(5,1fr)" }}>
         {[
-          { label:"Sans risque", val:counts[0], cls:"green", icon:<CheckCircle size={10}/> },
-          { label:"Risque faible", val:counts[1], cls:"amber", icon:<AlertTriangle size={10}/> },
-          { label:"Risque moyen",  val:counts[2], cls:"amber", icon:<TrendingUp size={10}/> },
-          { label:"Risque élevé",  val:counts[3], cls:"red",   icon:<AlertTriangle size={10}/> },
-          { label:"Confiance moy.",val:`${avgConf}%`, cls:"blue", icon:<TrendingUp size={10}/> },
+          { label:"Sans risque", val:counts[0], cls:"green", icon:<CheckCircle size={10}/>, tip:"Sessions sans détection de risque" },
+          { label:"Risque faible", val:counts[1], cls:"amber", icon:<AlertTriangle size={10}/>, tip:"Sessions avec risque faible" },
+          { label:"Risque moyen",  val:counts[2], cls:"amber", icon:<TrendingUp size={10}/>, tip:"Sessions avec risque modéré — vigilance requise" },
+          { label:"Risque élevé",  val:counts[3], cls:"red",   icon:<AlertTriangle size={10}/>, tip:"Sessions avec risque élevé — action requise" },
+          { label:"Confiance moy.",val:`${avgConf}%`, cls:"blue", icon:<TrendingUp size={10}/>, tip:"Confiance moyenne du modèle sur toutes les prédictions" },
         ].map(k=>(
-          <div key={k.label} className={`kpi-card ${k.cls}`}>
-            <div className="kpi-label">{k.icon} {k.label}</div>
+          <div key={k.label} className={`kpi-card ${k.cls} animate-in`}>
+            <div className="kpi-label">
+              {k.icon} {k.label}
+              <Tooltip content={k.tip} position="top">
+                <Info size={9} style={{ marginLeft:"auto", opacity:.45, cursor:"help" }}/>
+              </Tooltip>
+            </div>
             <div className="kpi-value">{k.val}</div>
             <div className="kpi-sub">sessions</div>
           </div>
@@ -76,21 +110,20 @@ export default function History() {
           <h2><Clock size={15} style={{ marginRight:6, verticalAlign:"middle" }}/>Historique des prédictions</h2>
           <div style={{ display:"flex", alignItems:"center", gap:".65rem", flexWrap:"wrap" }}>
             <div style={{ display:"flex", gap:".4rem", flexWrap:"wrap" }}>
-              <button className={`filter-btn${filter==="all"?" active":""}`} onClick={()=>setFilter("all")}>
-                Tous ({ALL.length})
-              </button>
+              <button className={`filter-btn${filter==="all"?" active":""}`} onClick={()=>setFilter("all")}>Tous ({ALL.length})</button>
               {RISK_META.map((m,i)=>(
-                <button key={i}
-                  className={`filter-btn${filter===String(i)?" active":""}`}
+                <button key={i} className={`filter-btn${filter===String(i)?" active":""}`}
                   onClick={()=>setFilter(String(i))}
                   style={filter===String(i)?{borderColor:m.border,background:m.bg,color:m.color}:{}}>
                   {m.label} ({counts[i]})
                 </button>
               ))}
             </div>
-            <button onClick={handleExport} style={{ display:"flex", alignItems:"center", gap:".35rem", padding:".3rem .85rem", borderRadius:"var(--radius-xs)", border:"1px solid rgba(107,144,113,.3)", background:"rgba(107,144,113,.1)", color:"var(--g300)", cursor:"pointer", fontSize:".73rem", fontWeight:600, transition:"all .15s", fontFamily:"var(--font)" }}>
-              <Download size={12}/> CSV
-            </button>
+            <Tooltip content="Télécharger toutes les données en format CSV" position="top">
+              <button onClick={handleExport} style={{ display:"flex", alignItems:"center", gap:".35rem", padding:".3rem .85rem", borderRadius:"var(--radius-xs)", border:"1px solid rgba(107,144,113,.3)", background:"rgba(107,144,113,.1)", color:"var(--g300)", cursor:"pointer", fontSize:".73rem", fontWeight:600, transition:"all .15s", fontFamily:"var(--font)" }}>
+                <Download size={12}/> CSV
+              </button>
+            </Tooltip>
           </div>
         </div>
 
@@ -98,9 +131,15 @@ export default function History() {
           <table className="history-table">
             <thead>
               <tr>
-                <th>Date / Heure</th><th>Scénario</th><th>Confiance</th>
-                <th>Débit gaz</th><th>Vent</th><th>Temp.</th><th>Humidité</th>
-                <th>Probabilités</th><th></th>
+                <th>Date / Heure</th>
+                <th>Scénario</th>
+                <th><Tooltip content="Niveau de confiance du modèle XGBoost" position="top">Confiance <Info size={9} style={{ verticalAlign:"middle", opacity:.55 }}/></Tooltip></th>
+                <th><Tooltip content="Débit de gaz simulé en m³/h" position="top">Débit gaz <Info size={9} style={{ verticalAlign:"middle", opacity:.55 }}/></Tooltip></th>
+                <th>Vent</th>
+                <th>Temp.</th>
+                <th>Humidité</th>
+                <th><Tooltip content="Mini-graphique des 4 probabilités" position="top">Probabilités <Info size={9} style={{ verticalAlign:"middle", opacity:.55 }}/></Tooltip></th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -123,17 +162,15 @@ export default function History() {
                         <div style={{ height:"100%", width:`${(row.gasFlow/3000)*100}%`, background:row.gasFlow>2000?"#f87171":row.gasFlow>1500?"#fb923c":"#4ade80", borderRadius:2 }}/>
                       </div>
                     </td>
-                    <td>
-                      <span style={{ color:"var(--text-primary)", fontWeight:600 }}>{row.windDir}</span>
-                      <span style={{ color:"var(--text-muted)", fontSize:".75rem", marginLeft:4 }}>{row.windSpeed} m/s</span>
-                    </td>
+                    <td><span style={{ color:"var(--text-primary)", fontWeight:600 }}>{row.windDir}</span><span style={{ color:"var(--text-muted)", fontSize:".75rem", marginLeft:4 }}>{row.windSpeed} m/s</span></td>
                     <td style={{ color:"var(--text-primary)", fontWeight:600 }}>{row.temperature}°C</td>
                     <td style={{ color:"var(--text-primary)", fontWeight:600 }}>{row.humidity}%</td>
                     <td>
                       <div style={{ display:"flex", gap:3, alignItems:"flex-end", height:22 }}>
                         {Object.entries(row.probabilities).map(([k,v],i)=>(
-                          <div key={k} title={`${k}: ${v}%`}
-                            style={{ width:6, height:`${Math.max(parseFloat(v)/100*20,2)}px`, borderRadius:2, background:RISK_META[i].color, opacity:.85 }}/>
+                          <Tooltip key={k} content={`${k}: ${v}%`} position="top">
+                            <div style={{ width:6, height:`${Math.max(parseFloat(v)/100*20,2)}px`, borderRadius:2, background:RISK_META[i].color, opacity:.85, cursor:"help" }}/>
+                          </Tooltip>
                         ))}
                       </div>
                     </td>
