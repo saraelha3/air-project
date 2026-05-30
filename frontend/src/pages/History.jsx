@@ -38,17 +38,16 @@ function genHistory() {
 const ALL = genHistory();
 
 export default function History() {
-  const [filter, setFilter]   = useState("all");
+  const [filter, setFilter]     = useState("all");
   const [expanded, setExpanded] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]   = useState(true);
   const toast = useToast();
 
-  // Simulate loading
   useEffect(() => {
     const t = setTimeout(() => {
       setLoading(false);
       toast.success("Historique chargé", `${ALL.length} sessions récupérées`, 3000);
-    }, 800);
+    }, 900);
     return () => clearTimeout(t);
   }, []);
 
@@ -71,8 +70,8 @@ export default function History() {
       <div className="kpi-strip" style={{ gridTemplateColumns:"repeat(5,1fr)" }}>
         {Array.from({length:5}).map((_,i)=>(
           <div key={i} style={{ background:"rgba(15,35,20,.7)", border:"1px solid rgba(174,195,176,0.1)", borderRadius:11, padding:"1rem 1.1rem", display:"flex", flexDirection:"column", gap:".55rem" }}>
-            <div className="skeleton" style={{ height:10, width:70, borderRadius:6 }}/>
-            <div className="skeleton" style={{ height:30, width:80, borderRadius:6 }}/>
+            <div style={{ height:10, width:70, borderRadius:6, background:"linear-gradient(90deg,rgba(55,85,52,.18) 25%,rgba(107,144,113,.22) 50%,rgba(55,85,52,.18) 75%)", backgroundSize:"600px 100%", animation:"shimmer 1.6s ease-in-out infinite" }}/>
+            <div style={{ height:30, width:80, borderRadius:6, background:"linear-gradient(90deg,rgba(55,85,52,.18) 25%,rgba(107,144,113,.22) 50%,rgba(55,85,52,.18) 75%)", backgroundSize:"600px 100%", animation:"shimmer 1.6s ease-in-out infinite" }}/>
           </div>
         ))}
       </div>
@@ -82,13 +81,13 @@ export default function History() {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
-      {/* KPI */}
+      {/* KPI strip */}
       <div className="kpi-strip animate-in" style={{ gridTemplateColumns:"repeat(5,1fr)" }}>
         {[
-          { label:"Sans risque", val:counts[0], cls:"green", icon:<CheckCircle size={10}/>, tip:"Sessions sans détection de risque" },
-          { label:"Risque faible", val:counts[1], cls:"amber", icon:<AlertTriangle size={10}/>, tip:"Sessions avec risque faible" },
-          { label:"Risque moyen",  val:counts[2], cls:"amber", icon:<TrendingUp size={10}/>, tip:"Sessions avec risque modéré — vigilance requise" },
-          { label:"Risque élevé",  val:counts[3], cls:"red",   icon:<AlertTriangle size={10}/>, tip:"Sessions avec risque élevé — action requise" },
+          { label:"Sans risque",   val:counts[0], cls:"green",  icon:<CheckCircle size={10}/>, tip:"Sessions sans détection de risque de pollution" },
+          { label:"Risque faible", val:counts[1], cls:"amber",  icon:<AlertTriangle size={10}/>, tip:"Sessions avec risque faible" },
+          { label:"Risque moyen",  val:counts[2], cls:"amber",  icon:<TrendingUp size={10}/>, tip:"Sessions avec risque modéré — vigilance requise" },
+          { label:"Risque élevé",  val:counts[3], cls:"red",    icon:<AlertTriangle size={10}/>, tip:"Sessions avec risque élevé — action requise" },
           { label:"Confiance moy.",val:`${avgConf}%`, cls:"blue", icon:<TrendingUp size={10}/>, tip:"Confiance moyenne du modèle sur toutes les prédictions" },
         ].map(k=>(
           <div key={k.label} className={`kpi-card ${k.cls} animate-in`}>
@@ -119,7 +118,7 @@ export default function History() {
                 </button>
               ))}
             </div>
-            <Tooltip content="Télécharger toutes les données en format CSV" position="top">
+            <Tooltip content="Télécharger toutes les données en CSV" position="top">
               <button onClick={handleExport} style={{ display:"flex", alignItems:"center", gap:".35rem", padding:".3rem .85rem", borderRadius:"var(--radius-xs)", border:"1px solid rgba(107,144,113,.3)", background:"rgba(107,144,113,.1)", color:"var(--g300)", cursor:"pointer", fontSize:".73rem", fontWeight:600, transition:"all .15s", fontFamily:"var(--font)" }}>
                 <Download size={12}/> CSV
               </button>
@@ -134,11 +133,9 @@ export default function History() {
                 <th>Date / Heure</th>
                 <th>Scénario</th>
                 <th><Tooltip content="Niveau de confiance du modèle XGBoost" position="top">Confiance <Info size={9} style={{ verticalAlign:"middle", opacity:.55 }}/></Tooltip></th>
-                <th><Tooltip content="Débit de gaz simulé en m³/h" position="top">Débit gaz <Info size={9} style={{ verticalAlign:"middle", opacity:.55 }}/></Tooltip></th>
-                <th>Vent</th>
-                <th>Temp.</th>
-                <th>Humidité</th>
-                <th><Tooltip content="Mini-graphique des 4 probabilités" position="top">Probabilités <Info size={9} style={{ verticalAlign:"middle", opacity:.55 }}/></Tooltip></th>
+                <th><Tooltip content="Débit de gaz OCP simulé en m³/h" position="top">Débit gaz <Info size={9} style={{ verticalAlign:"middle", opacity:.55 }}/></Tooltip></th>
+                <th>Vent</th><th>Temp.</th><th>Humidité</th>
+                <th><Tooltip content="Mini-graphique des 4 probabilités de risque" position="top">Probabilités <Info size={9} style={{ verticalAlign:"middle", opacity:.55 }}/></Tooltip></th>
                 <th></th>
               </tr>
             </thead>
@@ -150,11 +147,7 @@ export default function History() {
                       <div style={{ fontWeight:600, color:"var(--text-primary)", fontSize:".82rem" }}>{row.date}</div>
                       <div style={{ fontSize:".7rem", color:"var(--text-muted)" }}>{row.time}</div>
                     </td>
-                    <td>
-                      <span className="risk-pill" style={{ background:row.bg, border:`1px solid ${row.border}`, color:row.color }}>
-                        {["✅","⚠️","🔶","🚨"][row.scenario]} {row.label}
-                      </span>
-                    </td>
+                    <td><span className="risk-pill" style={{ background:row.bg, border:`1px solid ${row.border}`, color:row.color }}>{["✅","⚠️","🔶","🚨"][row.scenario]} {row.label}</span></td>
                     <td style={{ fontFamily:"var(--font-display)", color:row.color, fontWeight:700 }}>{row.confidence}%</td>
                     <td>
                       <div style={{ fontWeight:600, color:"var(--text-primary)" }}>{row.gasFlow} m³/h</div>

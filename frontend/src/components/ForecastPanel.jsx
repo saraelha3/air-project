@@ -16,7 +16,7 @@ export default function ForecastPanel({ forecast }) {
     if (daily.length >= 5) break;
   }
 
-  const dayName = (dtTxt) => new Date(dtTxt).toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"short" });
+  const dayName = dtTxt => new Date(dtTxt).toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"short" });
 
   return (
     <div className="forecast-panel animate-in" style={{ height:"100%" }}>
@@ -31,15 +31,15 @@ export default function ForecastPanel({ forecast }) {
         </div>
       </div>
       <div className="forecast-list">
-        {daily.map((item, i) => (
+        {daily.map((item,i) => (
           <div key={i} className="forecast-row">
-            <img className="forecast-row-icon" src={`https://openweathermap.org/img/wn/${item.icon}@2x.png`} alt={item.description} />
+            <img className="forecast-row-icon" src={`https://openweathermap.org/img/wn/${item.icon}@2x.png`} alt={item.description}/>
             <div className="forecast-row-info">
               <div className="forecast-row-day">{dayName(item.dt_txt)}</div>
               <div className="forecast-row-desc">{item.description}</div>
             </div>
             <div className="forecast-row-temp">{Math.round(item.temperature)}°C</div>
-            <div className="forecast-row-risk" style={{ background:getRiskColor(item.risk?.scenario??0), boxShadow:`0 0 5px ${getRiskColor(item.risk?.scenario??0)}` }} />
+            <div className="forecast-row-risk" style={{ background:getRiskColor(item.risk?.scenario??0), boxShadow:`0 0 5px ${getRiskColor(item.risk?.scenario??0)}` }}/>
           </div>
         ))}
         {tab !== "5j" && (

@@ -22,10 +22,21 @@ export default function App() {
   const handleThemeToggle = () => {
     toggleTheme();
     toast.info(
-      theme === "dark" ? "Mode clair activé" : "Mode sombre activé",
+      theme === "dark" ? "Mode clair activé ☀️" : "Mode sombre activé 🌙",
       theme === "dark" ? "Interface passée en thème clair" : "Interface passée en thème sombre"
     );
   };
+
+  const navItems = [
+    { to: "/", label: "Météo en direct", icon: <Cloud size={15} />, end: true },
+    { to: "/dashboard", label: "Simulation IA", icon: <BarChart2 size={15} /> },
+    { to: "/history", label: "Historique", icon: <Table2 size={15} /> },
+  ];
+  const disabledItems = [
+    { label: "Qualité de l'air", icon: <Wind size={15} /> },
+    { label: "Carte radar", icon: <Map size={15} /> },
+    { label: "Alertes", icon: <Bell size={15} /> },
+  ];
 
   return (
     <Router>
@@ -40,22 +51,15 @@ export default function App() {
           </div>
           <nav className="sidebar-nav">
             <span className="sidebar-section-label">Navigation</span>
-            <NavLink to="/" end className={({ isActive }) => isActive ? "active" : ""}>
-              <Cloud size={15} /> Météo en direct
-            </NavLink>
-            <NavLink to="/dashboard" className={({ isActive }) => isActive ? "active" : ""}>
-              <BarChart2 size={15} /> Simulation IA
-            </NavLink>
-            <NavLink to="/history" className={({ isActive }) => isActive ? "active" : ""}>
-              <Table2 size={15} /> Historique
-            </NavLink>
+            {navItems.map(item => (
+              <NavLink key={item.to} to={item.to} end={item.end}
+                className={({ isActive }) => isActive ? "active" : ""}>
+                {item.icon} {item.label}
+              </NavLink>
+            ))}
             <span className="sidebar-section-label" style={{ marginTop: ".4rem" }}>Données</span>
-            {[
-              { icon:<Wind size={15}/>, label:"Qualité de l'air" },
-              { icon:<Map size={15}/>, label:"Carte radar" },
-              { icon:<Bell size={15}/>, label:"Alertes" },
-            ].map(item => (
-              <span key={item.label} style={{ display:"flex", alignItems:"center", gap:".65rem", padding:".62rem .85rem", fontSize:".855rem", fontWeight:500, color:"var(--text-secondary)", opacity:.35, cursor:"default", borderRadius:"var(--radius-sm)" }}>
+            {disabledItems.map(item => (
+              <span key={item.label} style={{ display:"flex", alignItems:"center", gap:".65rem", padding:".62rem .85rem", fontSize:".855rem", fontWeight:500, color:"var(--text-secondary)", opacity:.32, cursor:"default", borderRadius:"var(--radius-sm)" }}>
                 {item.icon} {item.label}
               </span>
             ))}
@@ -76,12 +80,9 @@ export default function App() {
               <span>— Usine OCP Safi</span>
             </div>
             <div className="topbar-meta">
-              {/* Theme toggle */}
               <button className="theme-toggle" onClick={handleThemeToggle}
                 data-tip={theme === "dark" ? "Passer au mode clair" : "Passer au mode sombre"}>
-                {theme === "dark"
-                  ? <><Sun size={13}/> Clair</>
-                  : <><Moon size={13}/> Sombre</>}
+                {theme === "dark" ? <><Sun size={13}/> Clair</> : <><Moon size={13}/> Sombre</>}
               </button>
               <div className="topbar-badge">
                 <Activity size={12} />
@@ -99,7 +100,7 @@ export default function App() {
           </main>
 
           <div className="footer-status-bar">
-            <div className="footer-stat" data-tip="Nombre d'alertes actives">
+            <div className="footer-stat" data-tip="Alertes environnementales actives">
               <div className="fs-label"><AlertTriangle size={9}/> Alertes actives</div>
               <div className="fs-value amber">0</div>
             </div>
@@ -107,15 +108,15 @@ export default function App() {
               <div className="fs-label"><Cpu size={9}/> Modèle IA</div>
               <div className="fs-value blue">v1.0 XGBoost</div>
             </div>
-            <div className="footer-stat" data-tip="Heure de la dernière mise à jour">
+            <div className="footer-stat" data-tip="Heure de la dernière mise à jour des données">
               <div className="fs-label"><Clock size={9}/> Dernière MAJ</div>
               <div className="fs-value" style={{ color:"var(--text-primary)" }}>{timeStr}</div>
             </div>
-            <div className="footer-stat" data-tip="Niveau de confiance du modèle IA">
+            <div className="footer-stat" data-tip="Niveau de confiance moyen du modèle">
               <div className="fs-label"><CheckCircle size={9}/> Confiance</div>
               <div className="fs-value green">High</div>
             </div>
-            <div className="footer-stat" data-tip="État général du système">
+            <div className="footer-stat" data-tip="État de santé du système">
               <div className="fs-label"><Activity size={9}/> Santé système</div>
               <div className="fs-value green">Optimal</div>
             </div>
