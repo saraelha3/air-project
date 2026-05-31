@@ -39,7 +39,7 @@ export default function ForecastPanel({ forecast }) {
               <div className="forecast-row-desc">{item.description}</div>
             </div>
             <div className="forecast-row-temp">{Math.round(item.temperature)}°C</div>
-            <div className="forecast-row-risk" style={{ background:getRiskColor(item.risk?.scenario??0), boxShadow:`0 0 5px ${getRiskColor(item.risk?.scenario??0)}` }}/>
+            <div className="forecast-row-risk" style={{ background:getRiskColor(item.risk?.scenario??0), boxShadow:`0 0 6px ${getRiskColor(item.risk?.scenario??0)}`, border:"1.5px solid rgba(255,255,255,0.3)" }}/>
           </div>
         ))}
         {tab !== "5j" && (

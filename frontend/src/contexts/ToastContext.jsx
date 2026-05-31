@@ -98,14 +98,14 @@ function Toast({ toast, onRemove }) {
       onClick={() => onRemove(id)}
       style={{
         pointerEvents: "all",
-        background: "rgba(9,21,16,0.97)",
+        background: "#1a1a1a",
         border: `1px solid ${c.border}`,
         borderRadius: "12px",
         padding: "1rem 1.1rem 0.8rem",
         cursor: "pointer",
         position: "relative",
         overflow: "hidden",
-        boxShadow: `0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px ${c.border}`,
+        boxShadow: `0 8px 32px rgba(0,0,0,0.55), 0 0 0 1px ${c.border}`,
         transform: visible ? "translateX(0) scale(1)" : "translateX(120%) scale(0.9)",
         opacity: visible ? 1 : 0,
         transition: "transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease",
@@ -127,18 +127,18 @@ function Toast({ toast, onRemove }) {
           {ICONS[type]}
         </div>
         <div style={{ flex:1, paddingTop:".1rem" }}>
-          <p style={{ fontSize:".85rem", fontWeight:700, color:"var(--text-primary)", fontFamily:"var(--font-display)", lineHeight:1.3, marginBottom: description ? ".3rem" : 0 }}>
+          <p style={{ fontSize:".85rem", fontWeight:700, color:"#f0f0f0", fontFamily:"var(--font-display)", lineHeight:1.3, marginBottom: description ? ".3rem" : 0 }}>
             {message}
           </p>
           {description && (
-            <p style={{ fontSize:".75rem", color:"var(--text-secondary)", lineHeight:1.4 }}>
+            <p style={{ fontSize:".75rem", color:"rgba(220,220,220,0.7)", lineHeight:1.4 }}>
               {description}
             </p>
           )}
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(id); }}
-          style={{ background:"none", border:"none", color:"var(--text-muted)", cursor:"pointer", fontSize:"1rem", lineHeight:1, padding:0, marginTop:"-.1rem" }}
+          style={{ background:"none", border:"none", color:"rgba(180,180,180,0.6)", cursor:"pointer", fontSize:"1rem", lineHeight:1, padding:0, marginTop:"-.1rem" }}
         >×</button>
       </div>
 
