@@ -21,8 +21,8 @@ SAFI_LAT = 32.6333
 SAFI_LON = -8.7667
 
 # ─── OCP Plant coordinates (south of Safi) ───────────────────────────────────
-OCP_LAT = 32.2800
-OCP_LON = -8.7700
+OCP_LAT = 32.230966669524555
+OCP_LON = -9.250801692361742
 
 # ─── Gas flow simulation parameters ──────────────────────────────────────────
 GAS_FLOW_BASE     = 1500   # m³/h
