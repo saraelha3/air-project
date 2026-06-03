@@ -26,21 +26,19 @@ const KPI_TIPS = {
 };
 
 export default function Home() {
-  const { weather, forecast, loading: wLoading, error: wError, refresh } = useWeather();
-  const { prediction, loading: pLoading } = useRiskPrediction();
-  const toast = useToast();
+  const { weather, forecast, loading:wLoading, error:wError, refresh } = useWeather();
+  const { prediction, loading:pLoading } = useRiskPrediction();
+  const toast  = useToast();
   const loading = wLoading || pLoading;
 
   useEffect(() => {
-    if (weather && !wLoading) {
+    if (weather && !wLoading)
       toast.success("Données météo chargées", `Safi — ${weather.temperature?.toFixed(1)}°C, ${weather.description}`, 3000);
-    }
   }, [weather]);
 
   useEffect(() => {
-    if (prediction && !pLoading && prediction.scenario >= 2) {
+    if (prediction && !pLoading && prediction.scenario >= 2)
       toast.warning(`Alerte — ${prediction.label}`, `Confiance: ${prediction.confidence}% — Surveillance requise.`, 6000);
-    }
   }, [prediction]);
 
   useEffect(() => {
@@ -51,8 +49,7 @@ export default function Home() {
     <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 300px", gap:"1rem" }}>
         <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
-          <SkeletonHero />
-          <SkeletonKPI count={5} />
+          <SkeletonHero /><SkeletonKPI count={5} />
         </div>
         <SkeletonForecastPanel />
       </div>
@@ -67,22 +64,19 @@ export default function Home() {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
-      {prediction && <RiskAlert scenario={prediction.scenario} label={prediction.label} />}
+      {prediction && <RiskAlert scenario={prediction.scenario} label={prediction.label} confidence={prediction.confidence} />}
 
       {/* Hero + Prévisions 5j */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 300px", gap:"1rem", alignItems:"stretch" }}>
         <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
-          {/* Modern immersive hero */}
           <ModernWeatherHero weather={weather} />
-
-          {/* KPI strip */}
           <div className="kpi-strip animate-in" style={{ gridTemplateColumns:"repeat(5,1fr)" }}>
             {[
-              { label:"Température", value:`${weather?.temperature?.toFixed(1)??"--"}°`, sub:`Ressenti ${Math.round(weather?.feels_like??0)}°C`, cls:"blue", icon:<Thermometer size={10}/>, tip:KPI_TIPS.temperature },
-              { label:"Humidité",    value:`${weather?.humidity??"--"}%`, sub:`${weather?.pressure??"--"} hPa`, cls:"purple", icon:<Droplets size={10}/>, tip:KPI_TIPS.humidity },
-              { label:"Vent",        value:`${weather?.wind_speed?.toFixed(1)??"--"}`, sub:`m/s — ${weather?.wind_direction??"--"}`, cls:"blue", icon:<Wind size={10}/>, tip:KPI_TIPS.wind },
-              { label:"Nuages",      value:`${weather?.clouds??"--"}%`, sub:`Vis. ${weather?.visibility??"-"} km`, cls:"amber", icon:<Activity size={10}/>, tip:KPI_TIPS.clouds },
-              { label:"Risque IA",   value:prediction?.label??"—", sub:prediction?`${prediction.confidence}% conf.`:"—", cls:riskCls, icon:"🎯", tip:KPI_TIPS.risk, small:true },
+              { label:"Température", value:`${weather?.temperature?.toFixed(1)??"--"}°`, sub:`Ressenti ${Math.round(weather?.feels_like??0)}°C`, cls:"blue",   icon:<Thermometer size={10}/>, tip:KPI_TIPS.temperature },
+              { label:"Humidité",    value:`${weather?.humidity??"--"}%`,                 sub:`${weather?.pressure??"--"} hPa`,                  cls:"purple", icon:<Droplets size={10}/>,    tip:KPI_TIPS.humidity },
+              { label:"Vent",        value:`${weather?.wind_speed?.toFixed(1)??"--"}`,    sub:`m/s — ${weather?.wind_direction??"--"}`,           cls:"blue",   icon:<Wind size={10}/>,        tip:KPI_TIPS.wind },
+              { label:"Nuages",      value:`${weather?.clouds??"--"}%`,                  sub:`Vis. ${weather?.visibility??"-"} km`,               cls:"amber",  icon:<Activity size={10}/>,    tip:KPI_TIPS.clouds },
+              { label:"Risque IA",   value:prediction?.label??"—",                       sub:prediction?`${prediction.confidence}% conf.`:"—",   cls:riskCls,  icon:"🎯",                     tip:KPI_TIPS.risk, small:true },
             ].map(k => (
               <div key={k.label} className={`kpi-card ${k.cls} animate-in`}>
                 <div className="kpi-label">
@@ -97,27 +91,35 @@ export default function Home() {
             ))}
           </div>
         </div>
-
-        {/* Prévisions 5 jours */}
         <ForecastPanel forecast={forecast} />
       </div>
 
-      {/* Badge risque */}
       {prediction && (
         <div style={{ textAlign:"center" }} className="animate-in">
           <RiskBadge scenario={prediction.scenario} confidence={prediction.confidence} />
         </div>
       )}
 
-      {/* Carte radar */}
-      <div className="grid-2 animate-in">
+      
+      {/* ── CARTE PLEIN ÉCRAN ── */}
+      <div
+        className="animate-in"
+        style={{
+          height: "calc(100vh - 120px)",
+          minHeight: 520,
+          display: "flex",
+          flexDirection: "column",
+          borderRadius: "var(--radius)",
+          overflow: "hidden",
+          border: "1px solid var(--glass-border)",
+        }}
+      >
         <RadarMap weather={weather} />
       </div>
 
-      {/* Refresh */}
       <div style={{ textAlign:"center", paddingTop:".5rem" }}>
         <button
-          onClick={() => { refresh(); toast.info("Rafraîchissement en cours…", "Mise à jour des données météo", 2000); }}
+          onClick={() => { refresh(); toast.info("Rafraîchissement en cours…","Mise à jour des données météo",2000); }}
           style={{ display:"inline-flex", alignItems:"center", gap:".5rem", padding:".5rem 1.4rem", borderRadius:50, border:"1px solid var(--glass-border)", background:"var(--bg-card)", color:"var(--text-secondary)", cursor:"pointer", fontSize:".78rem", fontWeight:600, fontFamily:"var(--font)", transition:"all .2s" }}>
           <RefreshCw size={13}/> Rafraîchir les données
         </button>

@@ -212,8 +212,8 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:16px;
 .chart-container h3 { font-size:.73rem; font-weight:700; margin-bottom:.9rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.08em; }
 
 /* ── MAP ── */
-.map-container { border-radius:var(--radius); overflow:hidden; height:300px; border:1px solid var(--glass-border); }
-.map-container .leaflet-container { height:100%; width:100%; }
+.map-container { border-radius:var(--radius); overflow:hidden; height:100%; border:1px solid var(--glass-border); }
+.map-container .leaflet-container { height:100%; width:100%; min-height:100%; }
 
 /* ── HISTORY TABLE ── */
 .history-table-wrap { background:#141414; border:1px solid var(--glass-border); border-radius:var(--radius); overflow:hidden; }

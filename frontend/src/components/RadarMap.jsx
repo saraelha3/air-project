@@ -36,9 +36,9 @@ const AQI_LEVELS = [
 const getAqiLevel = aqi => AQI_LEVELS.find(l => aqi <= l.max) || AQI_LEVELS[3];
 
 const MAP_THEMES = {
+   satellite: { name:"Satellite", url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" },
   light:     { name:"Clair",     url:"https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" },
   dark:      { name:"Sombre",    url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" },
-  satellite: { name:"Satellite", url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" },
 };
 
 function buildPlumeLayers(windDeg, windSpeed, aqi) {
@@ -86,7 +86,7 @@ export default function RadarMap({ weather }) {
   const [activeFc, setActiveFc] = useState("now");
   const [liveData, setLiveData] = useState(FORECASTS.now);
   const [isLoading,setIsLoading]= useState(true);
-  const [mapTheme, setMapTheme] = useState("light");
+  const [mapTheme, setMapTheme] = useState("satellite");
 
   const getData = key => {
     const base = { ...FORECASTS[key] };
@@ -104,7 +104,7 @@ export default function RadarMap({ weather }) {
     const map = L.map(mapRef.current, { center:OCP_CENTER, zoom:14, zoomControl:false, attributionControl:false });
     L.control.zoom({ position:"bottomright" }).addTo(map);
     L.control.attribution({ position:"bottomleft", prefix:false }).addTo(map).setPrefix('© OpenStreetMap');
-    tileRef.current = L.tileLayer(MAP_THEMES.light.url, { maxZoom:18, subdomains:"abcd" }).addTo(map);
+    tileRef.current = L.tileLayer(MAP_THEMES.satellite.url, { maxZoom:18, subdomains:"abcd" }).addTo(map);
     leafletRef.current = map;
     setTimeout(() => { map.invalidateSize(); setIsLoading(false); renderLayers("now"); }, 300);
     return () => { map.remove(); leafletRef.current = null; };
@@ -143,13 +143,6 @@ export default function RadarMap({ weather }) {
       const ndx=dx/len, ndy=dy/len;
       const head=[p1,[p1[0]-ndy*sz-ndx*sz*0.5,p1[1]+ndx*sz-ndy*sz*0.5],[p1[0]-ndy*sz+ndx*sz*0.5,p1[1]+ndx*sz+ndy*sz*0.5],p1];
       refs.arrows.push(line, L.polygon(head, { color:"rgba(255,255,255,0.6)", fillColor:"rgba(255,255,255,0.6)", fillOpacity:1, weight:0 }).addTo(map));
-    });
-
-    EMISSION_SOURCES.forEach(src => {
-      const icon = L.divIcon({ html:`<div style="background:#15532e;border:2px solid #4ade80;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 12px #4ade8066">🏭</div>`, iconSize:[26,26], iconAnchor:[13,13], className:"" });
-      const m = L.marker(src.pos, { icon }).addTo(map);
-      m.bindPopup(`<div style="font-family:sans-serif;min-width:170px"><strong style="color:#4ade80">🏭 ${src.name}</strong><br/><small>Polluant : <b>${src.type}</b> · Flux : <b>${src.flow}</b></small></div>`);
-      refs.sources.push(m);
     });
 
     const ocpIcon = L.divIcon({ html:`<div style="background:#15532e;border:3px solid #4ade80;border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 16px #4ade8077">🏗</div>`, iconSize:[34,34], iconAnchor:[17,17], className:"" });
