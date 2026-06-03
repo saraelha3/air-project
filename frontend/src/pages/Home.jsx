@@ -129,13 +129,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Détails météo */}
-      <div className="animate-in">
-        <div style={{ fontSize:".72rem", fontWeight:700, textTransform:"uppercase", letterSpacing:".11em", color:"var(--text-muted)", marginBottom:".7rem", display:"flex", alignItems:"center", gap:".4rem" }}>
-          🌤️ Détails météorologiques
-        </div>
-        <WeatherDetails weather={weather} />
-      </div>
 
       {/* Refresh */}
       <div style={{ textAlign:"center", paddingTop:".5rem" }}>

@@ -37,21 +37,23 @@ const AQI_LEVELS = [
 const getAqiLevel = (aqi) => AQI_LEVELS.find(l => aqi <= l.max) || AQI_LEVELS[3];
 
 const MAP_THEMES = {
-  light: {
-    name: "Clair",
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    attribution: '© CartoDB',
-  },
-  dark: {
-    name: "Sombre",
-    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    attribution: '© CartoDB',
-  },
   satellite: {
     name: "Satellite",
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     attribution: '© Esri',
   },
+
+   light: {
+    name: "Clair",
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    attribution: '© CartoDB',
+  },
+
+  dark: {
+    name: "Sombre",
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    attribution: '© CartoDB',
+  }, 
 };
 
 function buildPlumeLayers(windDeg, windSpeed, aqi) {
@@ -121,7 +123,7 @@ export default function RadarMap({ weather }) {
   const [activeFc, setActiveFc]  = useState("now");
   const [liveData, setLiveData]  = useState(FORECASTS.now);
   const [isLoading,setIsLoading] = useState(true);
-  const [mapTheme, setMapTheme]  = useState("light");
+  const [mapTheme, setMapTheme]  = useState("satellite");
 
   const getData = (key) => {
     const base = { ...FORECASTS[key] };
@@ -145,7 +147,7 @@ export default function RadarMap({ weather }) {
       .addTo(map).setPrefix('© OpenStreetMap contributors');
     
     // Ajouter la tuile initiale
-    const theme = MAP_THEMES.light;
+    const theme = MAP_THEMES.satellite;
     tileLayerRef.current = L.tileLayer(theme.url, { maxZoom: 18, subdomains: "abcd" }).addTo(map);
     
     leafletRef.current = map;
