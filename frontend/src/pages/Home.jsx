@@ -109,26 +109,10 @@ export default function Home() {
         </div>
       )}
 
-      {/* Graphique horaire */}
-      <div className="glass animate-in">
-        <HourlyChart forecast={forecast} />
-      </div>
-
-      {/* Probabilités + Carte radar */}
+      {/* Carte radar */}
       <div className="grid-2 animate-in">
-        <ProbabilityChart probabilities={prediction?.probabilities} />
         <RadarMap weather={weather} />
       </div>
-
-      {/* Boussole + Débit gaz + Tuiles */}
-      <div style={{ display:"grid", gridTemplateColumns:"200px 1fr", gap:"1rem", alignItems:"start" }}>
-        <WindCompass direction={weather?.wind_direction} degrees={weather?.wind_deg} speed={weather?.wind_speed} />
-        <div style={{ display:"flex", flexDirection:"column", gap:".75rem" }}>
-          <GasFlowGauge value={weather?.gas_flow ?? 1970} />
-          <WeatherTiles weather={weather} prediction={prediction} />
-        </div>
-      </div>
-
 
       {/* Refresh */}
       <div style={{ textAlign:"center", paddingTop:".5rem" }}>

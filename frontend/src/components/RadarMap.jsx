@@ -201,17 +201,7 @@ export default function RadarMap({ weather }) {
       refs.arrows.push(line, arrow);
     });
 
-    // Sources
-    EMISSION_SOURCES.forEach(src => {
-      const icon = L.divIcon({
-        html: `<div style="background:#15532e;border:2px solid #4ade80;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 12px #4ade8066">🏭</div>`,
-        iconSize: [26,26], iconAnchor: [13,13], className: "",
-      });
-      const m = L.marker(src.pos, { icon }).addTo(map);
-      m.bindPopup(`<div style="font-family:sans-serif;min-width:170px"><strong style="color:#4ade80">🏭 ${src.name}</strong><br/><small>Polluant : <b>${src.type}</b> · Flux : <b>${src.flow}</b></small></div>`);
-      refs.sources.push(m);
-    });
-
+    
     // Marqueur principal OCP
     const ocpIcon = L.divIcon({
       html: `<div style="background:#15532e;border:3px solid #4ade80;border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 16px #4ade8077">🏗</div>`,
@@ -288,7 +278,13 @@ export default function RadarMap({ weather }) {
         ))}
       </div>
 
-      <div style={{ position:"relative", height:400 }}>
+      <div
+  style={{
+    position: "relative",
+    height: "calc(120vh - 120px)",
+    width: "100%",
+  }}
+>
         {isLoading && (
           <div style={{ position:"absolute", inset:0, background:"#0a1628", display:"flex", alignItems:"center", justifyContent:"center", zIndex:2000 }}>
             <div style={{ textAlign:"center", color:"#94a3b8" }}>
