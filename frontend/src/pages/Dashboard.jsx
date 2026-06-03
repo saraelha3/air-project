@@ -3,7 +3,6 @@ import useWeather from "../hooks/useWeather";
 import useRiskPrediction from "../hooks/useRiskPrediction";
 import { useToast } from "../contexts/ToastContext";
 import RiskBadge from "../components/RiskBadge";
-import RiskAlert from "../components/RiskAlert";
 import GasFlowGauge from "../components/GasFlowGauge";
 import WindCompass from "../components/WindCompass";
 import ProbabilityChart from "../components/ProbabilityChart";
@@ -24,10 +23,10 @@ const RISK_META = [
 ];
 
 export default function Dashboard() {
-  const { weather, forecast, loading: wLoading, error: wError } = useWeather();
-  const { prediction, predictCustom, loading: predicting, error: predError } = useRiskPrediction();
+  const { weather, forecast, loading:wLoading, error:wError } = useWeather();
+  const { prediction, predictCustom, loading:predicting, error:predError } = useRiskPrediction();
   const toast = useToast();
-  const [gasFlow, setGasFlow] = useState(1500);
+  const [gasFlow, setGasFlow]     = useState(1500);
   const [selectedDir, setSelectedDir] = useState("S");
 
   useEffect(() => { if (predError) toast.error("Erreur de prédiction", predError, 5000); }, [predError]);
@@ -52,10 +51,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
-      {prediction && <RiskAlert scenario={prediction.scenario} label={prediction.label} />}
-
-      {/* ── Panel simulation ── */}
+    <div style={{ display:"flex", flexDirection:"column", gap:"1rem", height:"100%" }}>
+      {/* Simulation */}
       <div className="glass animate-in" style={{ padding:"1.5rem" }}>
         <h2 style={{ fontFamily:"var(--font-display)", fontSize:"1rem", fontWeight:700, marginBottom:"1.4rem", display:"flex", alignItems:"center", gap:".5rem", color:"var(--text-primary)" }}>
           <Zap size={16} style={{ color:"#a78bfa" }}/> Simulation personnalisée IA
@@ -63,43 +60,29 @@ export default function Dashboard() {
             <Info size={14} style={{ color:"var(--text-muted)", cursor:"help", marginLeft:4 }}/>
           </Tooltip>
         </h2>
-
         <div className="grid-2" style={{ marginBottom:"1.2rem" }}>
           <GasFlowGauge value={gasFlow} onChange={setGasFlow} />
-          <div style={{ background:"rgba(15,35,20,.6)", border:"1px solid var(--glass-border)", borderRadius:"var(--radius-sm)", padding:"1.3rem" }}>
+          <div style={{ background:"var(--bg-card)", border:"1px solid var(--glass-border)", borderRadius:"var(--radius-sm)", padding:"1.3rem" }}>
             <div className="detail-label" style={{ marginBottom:".9rem", display:"flex", alignItems:"center", gap:".4rem" }}>
               <Wind size={13}/> Direction du vent simulée
-              <Tooltip content="La direction du vent détermine vers où se dispersent les polluants depuis l'usine OCP." position="top">
-                <Info size={11} style={{ color:"var(--text-muted)", cursor:"help", marginLeft:4 }}/>
-              </Tooltip>
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:".4rem" }}>
               {DIRECTIONS.map(d => (
                 <Tooltip key={d} content={DIR_TIPS[d]} position="top">
-                  <button onClick={() => setSelectedDir(d)} style={{
-                    width:"100%", padding:".4rem .3rem", borderRadius:"var(--radius-xs)",
-                    border:`1px solid ${d===selectedDir?"#a78bfa":"var(--glass-border)"}`,
-                    background:d===selectedDir?"rgba(167,139,250,0.15)":"transparent",
-                    color:d===selectedDir?"#a78bfa":"var(--text-secondary)",
-                    cursor:"pointer", fontSize:".8rem", fontWeight:700,
-                    transition:"all .15s", fontFamily:"var(--font)",
-                    boxShadow:d===selectedDir?"0 0 10px rgba(167,139,250,.2)":"none",
-                  }}>{d}</button>
+                  <button onClick={() => setSelectedDir(d)} style={{ width:"100%", padding:".4rem .3rem", borderRadius:"var(--radius-xs)", border:`1px solid ${d===selectedDir?"#a78bfa":"var(--glass-border)"}`, background:d===selectedDir?"rgba(167,139,250,0.15)":"transparent", color:d===selectedDir?"#a78bfa":"var(--text-secondary)", cursor:"pointer", fontSize:".8rem", fontWeight:700, transition:"all .15s", fontFamily:"var(--font)" }}>{d}</button>
                 </Tooltip>
               ))}
             </div>
           </div>
         </div>
-
-        {/* Conditions réelles */}
         <div style={{ display:"flex", gap:".65rem", marginBottom:"1.2rem", flexWrap:"wrap" }}>
           {[
-            { icon:<Thermometer size={12}/>, label:"Temp.", value:`${weather?.temperature?.toFixed(1)??"--"}°C`, tip:"Température actuelle utilisée dans la simulation" },
-            { icon:<Droplets size={12}/>, label:"Humidité", value:`${weather?.humidity??"--"}%`, tip:"Humidité relative actuelle" },
-            { icon:<Wind size={12}/>, label:"Vent réel", value:`${weather?.wind_speed?.toFixed(1)??"--"} m/s`, tip:"Vitesse du vent mesurée en temps réel" },
+            { icon:<Thermometer size={12}/>, label:"Temp.",    value:`${weather?.temperature?.toFixed(1)??"--"}°C`, tip:"Température actuelle" },
+            { icon:<Droplets size={12}/>,    label:"Humidité", value:`${weather?.humidity??"--"}%`, tip:"Humidité relative actuelle" },
+            { icon:<Wind size={12}/>,        label:"Vent réel",value:`${weather?.wind_speed?.toFixed(1)??"--"} m/s`, tip:"Vitesse du vent en temps réel" },
           ].map(item => (
             <Tooltip key={item.label} content={item.tip} position="top">
-              <div style={{ display:"flex", alignItems:"center", gap:".4rem", background:"rgba(255,255,255,.04)", border:"1px solid var(--glass-border)", borderRadius:"var(--radius-xs)", padding:".32rem .75rem", fontSize:".75rem", color:"var(--text-secondary)", cursor:"help" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:".4rem", background:"var(--bg-card)", border:"1px solid var(--glass-border)", borderRadius:"var(--radius-xs)", padding:".32rem .75rem", fontSize:".75rem", color:"var(--text-secondary)", cursor:"help" }}>
                 <span style={{ color:"var(--accent)" }}>{item.icon}</span>
                 <span style={{ color:"var(--text-muted)" }}>{item.label}</span>
                 <strong style={{ color:"var(--text-primary)", marginLeft:2 }}>{item.value}</strong>
@@ -107,18 +90,7 @@ export default function Dashboard() {
             </Tooltip>
           ))}
         </div>
-
-        <button onClick={handlePredict} disabled={predicting} style={{
-          width:"100%", padding:".85rem", borderRadius:"var(--radius-sm)",
-          border:"1px solid rgba(107,144,113,.4)",
-          background:predicting?"rgba(107,144,113,.1)":"linear-gradient(135deg,#375534,#6B9071)",
-          color:"var(--text-primary)", fontWeight:700, fontSize:".9rem",
-          cursor:predicting?"not-allowed":"pointer",
-          display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-          transition:"all .2s", opacity:predicting?.7:1,
-          boxShadow:predicting?"none":"0 4px 20px rgba(107,144,113,.25)",
-          letterSpacing:".02em", fontFamily:"var(--font)",
-        }}>
+        <button onClick={handlePredict} disabled={predicting} style={{ width:"100%", padding:".85rem", borderRadius:"var(--radius-sm)", border:"1px solid rgba(107,144,113,.4)", background:predicting?"rgba(107,144,113,.18)":"linear-gradient(135deg,#2d6a4f,#52b788)", color:"#fff", fontWeight:700, fontSize:".9rem", cursor:predicting?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, transition:"all .2s", opacity:predicting?.7:1, fontFamily:"var(--font)" }}>
           {predicting ? <><div className="loading-spinner" style={{ width:16, height:16, borderWidth:2 }}/> Calcul en cours…</> : <><RotateCcw size={15}/> Lancer la prédiction IA</>}
         </button>
       </div>
@@ -151,11 +123,21 @@ export default function Dashboard() {
             <WindCompass direction={prediction.weather?.wind_direction||weather?.wind_direction} degrees={prediction.weather?.wind_deg||weather?.wind_deg} speed={prediction.weather?.wind_speed||weather?.wind_speed} />
           </div>
           <div className="glass animate-in"><HourlyChart forecast={forecast} /></div>
-          <div className="grid-2 animate-in">
+
+          {/* ── CARTE PLEIN ÉCRAN ── */}
+          <div className="glass animate-in" style={{ height:"calc(100vh - 160px)", minHeight:500, display:"flex", flexDirection:"column", overflow:"hidden" }}>
             <RadarMap weather={weather} />
-            <ForecastPanel forecast={forecast} />
           </div>
+
+          <div className="glass animate-in"><ForecastPanel forecast={forecast} /></div>
         </>
+      )}
+
+      {/* Carte visible même sans prédiction */}
+      {!prediction && (
+        <div className="glass animate-in" style={{ height:"calc(100vh - 220px)", minHeight:480, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+          <RadarMap weather={weather} />
+        </div>
       )}
     </div>
   );

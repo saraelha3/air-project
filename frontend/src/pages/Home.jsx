@@ -11,7 +11,6 @@ import ProbabilityChart from "../components/ProbabilityChart";
 import RadarMap from "../components/RadarMap";
 import WindCompass from "../components/WindCompass";
 import GasFlowGauge from "../components/GasFlowGauge";
-import RiskAlert from "../components/RiskAlert";
 import RiskBadge from "../components/RiskBadge";
 import Tooltip from "../components/Tooltip";
 import { SkeletonHero, SkeletonKPI, SkeletonCard, SkeletonForecastPanel } from "../components/SkeletonLoader";
@@ -64,7 +63,6 @@ export default function Home() {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
-      {prediction && <RiskAlert scenario={prediction.scenario} label={prediction.label} confidence={prediction.confidence} />}
 
       {/* Hero + Prévisions 5j */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 300px", gap:"1rem", alignItems:"stretch" }}>
@@ -100,7 +98,6 @@ export default function Home() {
         </div>
       )}
 
-      
       {/* ── CARTE PLEIN ÉCRAN ── */}
       <div
         className="animate-in"
