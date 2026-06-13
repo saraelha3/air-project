@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Clock, Download, TrendingUp, AlertTriangle, CheckCircle, Info, Factory } from "lucide-react";
+import { Clock, Download, TrendingUp, AlertTriangle, CheckCircle, Info, Factory, Zap, Radio } from "lucide-react";
 import { useToast } from "../contexts/ToastContext";
 import Tooltip from "../components/Tooltip";
 import { SkeletonTable } from "../components/SkeletonLoader";
-import { getProductionState, getProductionPct } from "../utils/riskUtils";
+import { onHistoryChange } from "../services/firebase";
 
 const RISK_META = [
   { label:"Pas de risque", color:"#4ade80", bg:"rgba(74,222,128,0.12)",   border:"rgba(74,222,128,0.35)"  },
@@ -12,67 +12,54 @@ const RISK_META = [
   { label:"Risque élevé",  color:"#f87171", bg:"rgba(248,113,113,0.12)", border:"rgba(248,113,113,0.35)" },
 ];
 
-function genHistory() {
-  const rows = [];
-  const scs  = [0,0,0,1,0,0,2,0,1,0,0,0,3,0,1,0,0,2,0,0,1,0,0,0,1,0,0,3,0,0,1,0,0,2,0,1,0,0,0,1];
-  const dirs = ["N","NE","E","SE","S","SO","O","NO"];
-  for (let i = 0; i < 40; i++) {
-    const d    = new Date(Date.now() - i * 3600000 * 4);
-    const sc   = scs[i];
-    const conf = (85 + Math.random() * 14).toFixed(1);
-    const probs = [0,0,0,0].map((_,idx) => idx===sc ? (85+Math.random()*14).toFixed(1) : (Math.random()*5).toFixed(1));
-    const prodPct = getProductionPct(sc, i);
-    const prod    = getProductionState(sc);
-    rows.push({
-      id:i,
-      date:d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"}),
-      time:d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}),
-      scenario:sc, label:RISK_META[sc].label, color:RISK_META[sc].color,
-      bg:RISK_META[sc].bg, border:RISK_META[sc].border,
-      confidence:conf,
-      gasFlow:Math.round(800+Math.random()*2200),
-      windDir:dirs[Math.floor(Math.random()*8)],
-      windSpeed:(2+Math.random()*8).toFixed(1),
-      temperature:(16+Math.random()*14).toFixed(1),
-      humidity:Math.round(40+Math.random()*50),
-      probabilities:{"Pas de risque":probs[0],"Risque faible":probs[1],"Risque moyen":probs[2],"Risque élevé":probs[3]},
-      productionPct: prodPct,
-      productionLabel: prod.label,
-      productionColor: prod.color,
-      productionBadge: prod.badge,
-    });
-  }
-  return rows;
-}
-const ALL = genHistory();
-
 export default function History() {
+  const [historyData, setHistoryData] = useState([]);
   const [filter,   setFilter]   = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [expanded, setExpanded] = useState(null);
   const [loading,  setLoading]  = useState(true);
   const toast = useToast();
 
+  // ── Listen to Firebase Realtime Database ──────────────────────────────
   useEffect(() => {
-    const t = setTimeout(() => {
+    const unsubscribe = onHistoryChange((rows) => {
+      setHistoryData(rows);
       setLoading(false);
-      toast.success("Historique chargé", `${ALL.length} sessions récupérées`, 3000);
-    }, 900);
-    return () => clearTimeout(t);
+    });
+    // Timeout fallback — if Firebase responds with 0 rows we still stop loading
+    const timeout = setTimeout(() => setLoading(false), 5000);
+    return () => {
+      unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
-  const filtered = useMemo(() => filter==="all" ? ALL : ALL.filter(r => r.scenario===parseInt(filter)), [filter]);
-  const counts   = useMemo(() => { const c=[0,0,0,0]; ALL.forEach(r=>c[r.scenario]++); return c; }, []);
-  const avgConf  = (ALL.reduce((s,r) => s+parseFloat(r.confidence),0) / ALL.length).toFixed(1);
-  const avgProd  = Math.round(ALL.reduce((s,r) => s+r.productionPct, 0) / ALL.length);
+  // Show a toast once data has loaded
+  useEffect(() => {
+    if (!loading && historyData.length > 0) {
+      toast.success("Historique chargé", `${historyData.length} sessions récupérées`, 3000);
+    }
+  }, [loading]);
+
+  const filtered = useMemo(() => {
+    let rows = historyData;
+    if (filter !== "all") rows = rows.filter(r => r.scenario === parseInt(filter));
+    if (sourceFilter !== "all") rows = rows.filter(r => (r.source || "simulation") === sourceFilter);
+    return rows;
+  }, [filter, sourceFilter, historyData]);
+  const counts   = useMemo(() => { const c=[0,0,0,0]; historyData.forEach(r=>c[r.scenario]++); return c; }, [historyData]);
+  const avgConf  = historyData.length > 0 ? (historyData.reduce((s,r) => s+parseFloat(r.confidence||0),0) / historyData.length).toFixed(1) : "0.0";
+  const avgProd  = historyData.length > 0 ? Math.round(historyData.reduce((s,r) => s+(r.productionPct||0), 0) / historyData.length) : 0;
 
   const handleExport = () => {
-    const header = "Date,Heure,Scénario,Confiance,État production,Production %,Débit gaz,Direction vent,Vitesse vent,Température,Humidité,Pas de risque %,Risque faible %,Risque moyen %,Risque élevé %\n";
-    const rows   = ALL.map(r => `${r.date},${r.time},${r.label},${r.confidence}%,${r.productionLabel},${r.productionPct}%,${r.gasFlow},${r.windDir},${r.windSpeed} m/s,${r.temperature}°C,${r.humidity}%,${r.probabilities["Pas de risque"]},${r.probabilities["Risque faible"]},${r.probabilities["Risque moyen"]},${r.probabilities["Risque élevé"]}`).join("\n");
+    if (historyData.length === 0) { toast.warning("Aucune donnée", "L'historique est vide, rien à exporter."); return; }
+    const header = "Date,Heure,Source,Scénario,Confiance,État production,Production %,Débit gaz,Direction vent,Vitesse vent,Température,Humidité,Pas de risque %,Risque faible %,Risque moyen %,Risque élevé %\n";
+    const rows   = historyData.map(r => `${r.date},${r.time},${r.source||"simulation"},${r.label},${r.confidence}%,${r.productionLabel},${r.productionPct}%,${r.gasFlow},${r.windDir},${r.windSpeed} m/s,${r.temperature}°C,${r.humidity}%,${r.probabilities?.["Pas de risque"]||0},${r.probabilities?.["Risque faible"]||0},${r.probabilities?.["Risque moyen"]||0},${r.probabilities?.["Risque élevé"]||0}`).join("\n");
     const blob   = new Blob([header+rows], { type:"text/csv;charset=utf-8;" });
     const url    = URL.createObjectURL(blob);
     const a      = document.createElement("a"); a.href=url; a.download="historique_ocp_atmosafe.csv"; a.click();
     URL.revokeObjectURL(url);
-    toast.success("Export CSV réussi", `${ALL.length} lignes exportées`, 3000);
+    toast.success("Export CSV réussi", `${historyData.length} lignes exportées`, 3000);
   };
 
   if (loading) return (
@@ -86,6 +73,22 @@ export default function History() {
         ))}
       </div>
       <SkeletonTable />
+    </div>
+  );
+
+  // ── Empty state ────────────────────────────────────────────────────────
+  if (historyData.length === 0) return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:"1.5rem", padding:"4rem 2rem", textAlign:"center" }}>
+      <div style={{ width:80, height:80, borderRadius:"50%", background:"rgba(107,144,113,0.1)", border:"1px solid rgba(107,144,113,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <Clock size={36} style={{ color:"var(--g300)", opacity:0.6 }}/>
+      </div>
+      <div>
+        <h2 style={{ fontFamily:"var(--font-display)", fontSize:"1.3rem", color:"var(--text-primary)", marginBottom:".5rem" }}>Aucun historique</h2>
+        <p style={{ color:"var(--text-muted)", fontSize:".85rem", maxWidth:420, lineHeight:1.6 }}>
+          L'historique est vide pour le moment. Lancez une prédiction depuis la page
+          <strong style={{ color:"var(--g300)" }}> Simulation IA</strong> pour commencer à enregistrer des données.
+        </p>
+      </div>
     </div>
   );
 
@@ -120,7 +123,7 @@ export default function History() {
           <h2><Clock size={15} style={{ marginRight:6, verticalAlign:"middle" }}/>Historique des prédictions</h2>
           <div style={{ display:"flex", alignItems:"center", gap:".65rem", flexWrap:"wrap" }}>
             <div style={{ display:"flex", gap:".4rem", flexWrap:"wrap" }}>
-              <button className={`filter-btn${filter==="all"?" active":""}`} onClick={() => setFilter("all")}>Tous ({ALL.length})</button>
+              <button className={`filter-btn${filter==="all"?" active":""}`} onClick={() => setFilter("all")}>Tous ({historyData.length})</button>
               {RISK_META.map((m,i) => (
                 <button key={i} className={`filter-btn${filter===String(i)?" active":""}`}
                   onClick={() => setFilter(String(i))}
@@ -128,6 +131,19 @@ export default function History() {
                   {m.label} ({counts[i]})
                 </button>
               ))}
+            </div>
+            <div style={{ display:"flex", gap:".4rem", flexWrap:"wrap" }}>
+              <button className={`filter-btn${sourceFilter==="all"?" active":""}`} onClick={() => setSourceFilter("all")}>
+                📊 Tous
+              </button>
+              <button className={`filter-btn${sourceFilter==="réel"?" active":""}`} onClick={() => setSourceFilter("réel")}
+                style={sourceFilter==="réel"?{borderColor:"rgba(96,165,250,0.5)",background:"rgba(96,165,250,0.12)",color:"#60a5fa"}:{}}>
+                <Radio size={10} style={{ marginRight:3 }}/> Réel
+              </button>
+              <button className={`filter-btn${sourceFilter==="simulation"?" active":""}`} onClick={() => setSourceFilter("simulation")}
+                style={sourceFilter==="simulation"?{borderColor:"rgba(167,139,250,0.5)",background:"rgba(167,139,250,0.12)",color:"#a78bfa"}:{}}>
+                <Zap size={10} style={{ marginRight:3 }}/> Simulation
+              </button>
             </div>
             <Tooltip content="Télécharger toutes les données en CSV" position="top">
               <button onClick={handleExport} style={{ display:"flex", alignItems:"center", gap:".35rem", padding:".3rem .85rem", borderRadius:"var(--radius-xs)", border:"1px solid rgba(107,144,113,.3)", background:"rgba(107,144,113,.1)", color:"var(--g300)", cursor:"pointer", fontSize:".73rem", fontWeight:600, fontFamily:"var(--font)" }}>
@@ -142,6 +158,7 @@ export default function History() {
             <thead>
               <tr>
                 <th>Date / Heure</th>
+                <th>Source</th>
                 <th>Scénario</th>
                 <th>
                   <Tooltip content="Niveau de confiance du modèle XGBoost" position="top">
@@ -180,6 +197,17 @@ export default function History() {
                       <div style={{ fontSize:".7rem", color:"var(--text-muted)" }}>{row.time}</div>
                     </td>
                     <td>
+                      {(row.source || "simulation") === "réel" ? (
+                        <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:".18rem .55rem", borderRadius:20, fontSize:".68rem", fontWeight:700, background:"rgba(96,165,250,0.1)", border:"1px solid rgba(96,165,250,0.3)", color:"#60a5fa" }}>
+                          <Radio size={9}/> Réel
+                        </span>
+                      ) : (
+                        <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:".18rem .55rem", borderRadius:20, fontSize:".68rem", fontWeight:700, background:"rgba(167,139,250,0.1)", border:"1px solid rgba(167,139,250,0.3)", color:"#a78bfa" }}>
+                          <Zap size={9}/> Simulation
+                        </span>
+                      )}
+                    </td>
+                    <td>
                       <span className="risk-pill" style={{ background:row.bg, border:`1px solid ${row.border}`, color:row.color }}>
                         {["✅","⚠️","🔶","🚨"][row.scenario]} {row.label}
                       </span>
@@ -214,9 +242,9 @@ export default function History() {
                     <td style={{ color:"var(--text-primary)", fontWeight:600 }}>{row.humidity}%</td>
                     <td>
                       <div style={{ display:"flex", gap:3, alignItems:"flex-end", height:22 }}>
-                        {Object.entries(row.probabilities).map(([k,v],i) => (
+                        {row.probabilities && Object.entries(row.probabilities).map(([k,v],i) => (
                           <Tooltip key={k} content={`${k}: ${v}%`} position="top">
-                            <div style={{ width:6, height:`${Math.max(parseFloat(v)/100*20,2)}px`, borderRadius:2, background:RISK_META[i].color, opacity:.85, cursor:"help" }}/>
+                            <div style={{ width:6, height:`${Math.max(parseFloat(v)/100*20,2)}px`, borderRadius:2, background:RISK_META[i]?.color || "#888", opacity:.85, cursor:"help" }}/>
                           </Tooltip>
                         ))}
                       </div>
@@ -227,15 +255,15 @@ export default function History() {
                   {/* Ligne détail expandée */}
                   {expanded === row.id && (
                     <tr>
-                      <td colSpan={10} style={{ background:"rgba(107,144,113,.04)", padding:"1rem 1.2rem" }}>
+                      <td colSpan={11} style={{ background:"rgba(107,144,113,.04)", padding:"1rem 1.2rem" }}>
                         <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:".75rem" }}>
                           {/* Probas */}
-                          {Object.entries(row.probabilities).map(([k,v],i) => (
-                            <div key={k} style={{ background:RISK_META[i].bg, border:`1px solid ${RISK_META[i].border}`, borderRadius:"var(--radius-sm)", padding:".75rem 1rem" }}>
-                              <div style={{ fontSize:".62rem", fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:RISK_META[i].color, marginBottom:".35rem" }}>{k}</div>
-                              <div style={{ fontFamily:"var(--font-display)", fontSize:"1.4rem", fontWeight:700, color:RISK_META[i].color }}>{v}%</div>
+                          {row.probabilities && Object.entries(row.probabilities).map(([k,v],i) => (
+                            <div key={k} style={{ background:RISK_META[i]?.bg, border:`1px solid ${RISK_META[i]?.border}`, borderRadius:"var(--radius-sm)", padding:".75rem 1rem" }}>
+                              <div style={{ fontSize:".62rem", fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:RISK_META[i]?.color, marginBottom:".35rem" }}>{k}</div>
+                              <div style={{ fontFamily:"var(--font-display)", fontSize:"1.4rem", fontWeight:700, color:RISK_META[i]?.color }}>{v}%</div>
                               <div style={{ marginTop:".45rem", height:3, borderRadius:2, background:"rgba(255,255,255,.08)", overflow:"hidden" }}>
-                                <div style={{ height:"100%", width:`${v}%`, background:RISK_META[i].color, borderRadius:2 }}/>
+                                <div style={{ height:"100%", width:`${v}%`, background:RISK_META[i]?.color, borderRadius:2 }}/>
                               </div>
                             </div>
                           ))}
@@ -249,7 +277,7 @@ export default function History() {
                                 <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="6"/>
                                 <circle cx="32" cy="32" r="26" fill="none" stroke={row.productionColor} strokeWidth="6" strokeLinecap="round"
                                   strokeDasharray={`${2*Math.PI*26}`}
-                                  strokeDashoffset={`${2*Math.PI*26*(1-row.productionPct/100)}`}
+                                  strokeDashoffset={`${2*Math.PI*26*(1-(row.productionPct||0)/100)}`}
                                 />
                               </svg>
                               <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--font-display)", fontSize:"1.1rem", fontWeight:700, color:row.productionColor }}>
@@ -269,8 +297,8 @@ export default function History() {
         </div>
 
         <div className="history-stats">
-          <div className="hstat"><div className="hstat-val">{ALL.length}</div><div className="hstat-lbl">Total sessions</div></div>
-          <div className="hstat"><div className="hstat-val" style={{ color:"#4ade80" }}>{((counts[0]/ALL.length)*100).toFixed(0)}%</div><div className="hstat-lbl">Sans risque</div></div>
+          <div className="hstat"><div className="hstat-val">{historyData.length}</div><div className="hstat-lbl">Total sessions</div></div>
+          <div className="hstat"><div className="hstat-val" style={{ color:"#4ade80" }}>{historyData.length > 0 ? ((counts[0]/historyData.length)*100).toFixed(0) : 0}%</div><div className="hstat-lbl">Sans risque</div></div>
           <div className="hstat"><div className="hstat-val" style={{ color:"#f87171" }}>{counts[2]+counts[3]}</div><div className="hstat-lbl">Risques critiques</div></div>
           <div className="hstat"><div className="hstat-val" style={{ color:"var(--g300)" }}>{avgConf}%</div><div className="hstat-lbl">Confiance moyenne</div></div>
           <div className="hstat"><div className="hstat-val" style={{ color:"#4ade80" }}>{avgProd}%</div><div className="hstat-lbl">Production moy.</div></div>

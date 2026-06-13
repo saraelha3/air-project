@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import useWeather from "../hooks/useWeather";
 import useRiskPrediction from "../hooks/useRiskPrediction";
 import { useToast } from "../contexts/ToastContext";
@@ -15,6 +15,8 @@ import RiskBadge from "../components/RiskBadge";
 import Tooltip from "../components/Tooltip";
 import { SkeletonHero, SkeletonKPI, SkeletonCard, SkeletonForecastPanel } from "../components/SkeletonLoader";
 import { Thermometer, Droplets, Wind, Activity, RefreshCw, Info } from "lucide-react";
+import { pushHistoryEntry } from "../services/firebase";
+import { getProductionState, getProductionPct } from "../utils/riskUtils";
 
 const KPI_TIPS = {
   temperature: "Température de l'air à Safi. Mesurée en temps réel par l'API météo.",
@@ -29,6 +31,7 @@ export default function Home() {
   const { prediction, loading:pLoading } = useRiskPrediction();
   const toast  = useToast();
   const loading = wLoading || pLoading;
+  const savedPredictionRef = useRef(null);
 
   useEffect(() => {
     if (weather && !wLoading)
@@ -39,6 +42,54 @@ export default function Home() {
     if (prediction && !pLoading && prediction.scenario >= 2)
       toast.warning(`Alerte — ${prediction.label}`, `Confiance: ${prediction.confidence}% — Surveillance requise.`, 6000);
   }, [prediction]);
+
+  // ── Save real-time prediction to Firebase history ──────────────────
+  useEffect(() => {
+    if (!prediction || pLoading || !weather) return;
+    // Avoid saving the same prediction twice
+    const predKey = `${prediction.scenario}-${prediction.confidence}-${weather.temperature}`;
+    if (savedPredictionRef.current === predKey) return;
+    savedPredictionRef.current = predKey;
+
+    const sc = prediction.scenario;
+    const now = new Date();
+    const prodPct = getProductionPct(sc, Date.now());
+    const prod = getProductionState(sc);
+    const riskMeta = [
+      { label:"Pas de risque", color:"#4ade80", bg:"rgba(74,222,128,0.12)", border:"rgba(74,222,128,0.35)" },
+      { label:"Risque faible", color:"#fbbf24", bg:"rgba(251,191,36,0.12)", border:"rgba(251,191,36,0.35)" },
+      { label:"Risque moyen",  color:"#fb923c", bg:"rgba(251,146,60,0.12)", border:"rgba(251,146,60,0.35)" },
+      { label:"Risque élevé",  color:"#f87171", bg:"rgba(248,113,113,0.12)", border:"rgba(248,113,113,0.35)" },
+    ];
+    const meta = riskMeta[sc] || riskMeta[0];
+
+    pushHistoryEntry({
+      source: "réel",
+      date: now.toLocaleDateString("fr-FR", { day:"2-digit", month:"short", year:"numeric" }),
+      time: now.toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" }),
+      scenario: sc,
+      label: meta.label,
+      color: meta.color,
+      bg: meta.bg,
+      border: meta.border,
+      confidence: prediction.confidence,
+      gasFlow: prediction.gas_flow || 0,
+      windDir: weather?.wind_direction || "--",
+      windSpeed: weather?.wind_speed?.toFixed(1) || "0.0",
+      temperature: weather?.temperature?.toFixed(1) || "0.0",
+      humidity: weather?.humidity || 0,
+      probabilities: prediction.probabilities || {
+        "Pas de risque": "0.0",
+        "Risque faible": "0.0",
+        "Risque moyen": "0.0",
+        "Risque élevé": "0.0",
+      },
+      productionPct: prodPct,
+      productionLabel: prod.label,
+      productionColor: prod.color,
+      productionBadge: prod.badge,
+    }).catch(err => console.error("Firebase write error (réel):", err));
+  }, [prediction, pLoading, weather]);
 
   useEffect(() => {
     if (wError) toast.error("Erreur de chargement", wError, 5000);

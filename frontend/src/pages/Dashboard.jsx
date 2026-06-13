@@ -12,6 +12,8 @@ import ForecastPanel from "../components/ForecastPanel";
 import Tooltip from "../components/Tooltip";
 import { SkeletonCard, SkeletonKPI } from "../components/SkeletonLoader";
 import { Wind, RotateCcw, Zap, Thermometer, Droplets, CheckCircle, AlertTriangle, TrendingUp, Info } from "lucide-react";
+import { pushHistoryEntry } from "../services/firebase";
+import { getProductionState, getProductionPct } from "../utils/riskUtils";
 
 const DIRECTIONS = ["N","NE","E","SE","S","SO","O","NO"];
 const DIR_TIPS = { N:"Nord → polluants vers la ville", NE:"Nord-Est → risque modéré", E:"Est → vers l'Atlantique", SE:"Sud-Est → risque faible", S:"Sud → vers le Nord", SO:"Sud-Ouest → dispersion en mer", O:"Ouest → dilution maritime", NO:"Nord-Ouest → risque modéré" };
@@ -47,7 +49,56 @@ export default function Dashboard() {
 
   const handlePredict = async () => {
     toast.info("Prédiction en cours…", `Débit: ${gasFlow} m³/h · Vent: ${selectedDir}`, 2000);
-    await predictCustom({ gas_flow: gasFlow, direction_vent: selectedDir });
+    const res = await predictCustom({ gas_flow: gasFlow, direction_vent: selectedDir });
+
+    // ── Save the prediction to Firebase Realtime Database ────────────
+    if (res && res.success && res.data) {
+      const pred = res.data;
+      const now = new Date();
+      const sc = pred.scenario;
+      const prodPct = getProductionPct(sc, Date.now());
+      const prod = getProductionState(sc);
+      const riskMeta = [
+        { label:"Pas de risque", color:"#4ade80", bg:"rgba(74,222,128,0.12)", border:"rgba(74,222,128,0.35)" },
+        { label:"Risque faible", color:"#fbbf24", bg:"rgba(251,191,36,0.12)", border:"rgba(251,191,36,0.35)" },
+        { label:"Risque moyen",  color:"#fb923c", bg:"rgba(251,146,60,0.12)", border:"rgba(251,146,60,0.35)" },
+        { label:"Risque élevé",  color:"#f87171", bg:"rgba(248,113,113,0.12)", border:"rgba(248,113,113,0.35)" },
+      ];
+      const meta = riskMeta[sc] || riskMeta[0];
+
+      try {
+        await pushHistoryEntry({
+          source: "simulation",
+          date: now.toLocaleDateString("fr-FR", { day:"2-digit", month:"short", year:"numeric" }),
+          time: now.toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" }),
+          scenario: sc,
+          label: meta.label,
+          color: meta.color,
+          bg: meta.bg,
+          border: meta.border,
+          confidence: pred.confidence,
+          gasFlow: gasFlow,
+          windDir: selectedDir,
+          windSpeed: weather?.wind_speed?.toFixed(1) || "0.0",
+          temperature: weather?.temperature?.toFixed(1) || "0.0",
+          humidity: weather?.humidity || 0,
+          probabilities: pred.probabilities || {
+            "Pas de risque": "0.0",
+            "Risque faible": "0.0",
+            "Risque moyen": "0.0",
+            "Risque élevé": "0.0",
+          },
+          productionPct: prodPct,
+          productionLabel: prod.label,
+          productionColor: prod.color,
+          productionBadge: prod.badge,
+        });
+        toast.success("Historique sauvegardé", "Prédiction enregistrée dans Firebase", 2500);
+      } catch (err) {
+        console.error("Firebase write error:", err);
+        toast.error("Erreur sauvegarde", "Impossible d'enregistrer dans Firebase", 4000);
+      }
+    }
   };
 
   return (
