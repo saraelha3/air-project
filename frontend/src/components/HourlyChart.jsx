@@ -12,18 +12,18 @@ const CustomTooltip = ({ active, payload, label }) => {
         padding: "12px 16px",
         fontSize: ".8rem",
         boxShadow: "0 8px 30px rgba(0,0,0,0.5)",
-        color: "var(--text-primary)",
+        color: "#ffffff",
       }}
     >
-      <p style={{ fontWeight: 700, marginBottom: 6, color: "var(--text-muted)", fontSize: "0.75rem" }}>
+      <p style={{ fontWeight: 700, marginBottom: 6, color: "#a0a0a0", fontSize: "0.75rem" }}>
         ⌛ Prévision de {label}
       </p>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {payload.map((p, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: p.color }} />
-            <span style={{ color: "var(--text-secondary)" }}>{p.name}:</span>
-            <strong style={{ color: "var(--text-primary)", fontFamily: "var(--font-display)" }}>
+            <span style={{ color: "#d0d0d0" }}>{p.name}:</span>
+            <strong style={{ color: "#ffffff", fontFamily: "var(--font-display)" }}>
               {p.value}{p.name === "Temp" ? "°C" : p.name === "Humidité" ? "%" : " m/s"}
             </strong>
           </div>
