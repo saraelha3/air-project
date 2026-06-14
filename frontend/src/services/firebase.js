@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, push, onValue, query, orderByChild } from "firebase/database";
+import { getDatabase, ref, push, onValue, query, orderByChild, remove } from "firebase/database";
 
 // Firebase configuration — air-projet
 const firebaseConfig = {
@@ -50,6 +50,15 @@ export function onHistoryChange(callback) {
     callback(rows);
   });
   return unsubscribe;
+}
+
+/**
+ * Delete a history entry from Realtime Database.
+ * @param {string} id – the unique entry ID to remove
+ * @returns {Promise} – resolves when the delete completes
+ */
+export function deleteHistoryEntry(id) {
+  return remove(ref(database, `historique/${id}`));
 }
 
 export { database };
